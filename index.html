@@ -1,29 +1,60 @@
 <!DOCTYPE HTML>
 <html lang="en">
 <head>
+  <!-- Launch Script -->
+  <script src="https://assets.adobedtm.com/6a203c8a0ff8/a402e74a8bd7/launch-105e30aad6b3-development.min.js" async></script>
 
-<!-- Launch Script -->
-<script src="https://assets.adobedtm.com/6a203c8a0ff8/a402e74a8bd7/launch-105e30aad6b3-development.min.js" async></script>
   <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4T</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-        }
-        h1 {
-            color: #333;
-        }
-    </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A4T</title>
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #333;
+    }
+    button, a.exit-link {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      text-decoration: none;
+      color: white;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    a.exit-link:hover, button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-    <h1>Hello! Let's implement Adobe Analytics </h1>
-    <button onclick="alert('Button was clicked!')">Click Me!</button>
+  <h1>Hello! Let's implement Adobe Analytics</h1>
+
+  <button onclick="alert('Button was clicked!')">Click Me!</button>
+
+  <!-- Exit Link -->
+  <a href="https://example.com" class="exit-link" onclick="return confirmExit(event)">Go to External Site</a>
+
+  <script>
+    function confirmExit(event) {
+      const userConfirmed = confirm("You are about to leave this site. Do you want to continue?");
+      if (!userConfirmed) {
+        event.preventDefault(); // Cancel navigation
+        return false;
+      }
+      return true;
+    }
+  </script>
 </body>
 </html>
