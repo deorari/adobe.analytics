@@ -1,62 +1,125 @@
-<!DOCTYPE HTML>
+<!doctype html>
 <html lang="en">
 <head>
-  <!-- Launch Script -->
-  <script src="https://assets.adobedtm.com/6a203c8a0ff8/478b497d6b15/launch-ff0d17e3a818-development.min.js" async></script>
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A4T</title>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Two Buttons — Analytics Link & Pageview Example</title>
   <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-    }
-    h1 {
-      color: #333;
-    }
-    button, a.exit-link {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      text-decoration: none;
-      color: white;
-      background-color: #007BFF;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    a.exit-link:hover, button:hover {
-      background-color: #0056b3;
-    }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; padding: 40px; }
+    button { padding: 12px 18px; margin: 8px; font-size: 16px; border-radius: 6px; }
+    .btn-analytics-link { background: #0b69ff; color: white; }
+    .btn-pageview { background: #00a86b; color: white; }
   </style>
 </head>
 <body>
-  <h1>Hello! Let's implement Adobe Analytics</h1>
-  
-  <a href="https://deorari.github.io/adobe.analytics/">Activity map internal Link</a>
+  <h1>Demo: Analytics Link (server call) & Pageview (virtual pageview)</h1>
 
-  <button onclick="alert('Button was clicked!')">Click Me!</button>
+  <!-- IMPORTANT: These are the exact CSS selectors you should use in your Launch rules -->
+  <button class="btn-analytics-link" data-event="analytics-link" id="analyticsLinkBtn">
+    Fire analytics link (server call)
+  </button>
 
-  <!-- Exit Link -->
-  <a href="https://example.com" class="exit-link" onclick="return confirmExit(event)">Go to External Site</a>
+  <button class="btn-pageview" data-event="pageview" id="pageviewBtn">
+    Fire page view
+  </button>
 
   <script>
-    function confirmExit(event) {
-      const userConfirmed = confirm("You are about to leave this site. Do you want to continue?");
-      if (!userConfirmed) {
-        event.preventDefault(); // Cancel navigation
-        return false;
+  /*
+    Behaviour implemented here is intentionally simple and framework-agnostic.
+
+    - Launch rules: create two rules using Event Type = "Element" -> "Click"
+      and use the following CSS selectors for the rules' "Element selector / matches":
+        1) .btn-analytics-link
+        2) .btn-pageview
+
+    - The sample below does two things on each click:
+        * sends a small server call (fetch / navigator.sendBeacon) to emulate network/server call
+        * dispatches a CustomEvent on document so you can also create Launch rules that
+          listen for a Custom Event (optional). This is handy if you want Launch to react
+          to programmatic events rather than direct clicks.
+  */
+
+  // Utility to safely send a small payload using sendBeacon when available
+  function sendBeaconJson(url, data) {
+    try {
+      const json = JSON.stringify(data || {});
+      if (navigator.sendBeacon) {
+        const blob = new Blob([json], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+        return Promise.resolve({ beacon: true });
       }
-      return true;
+      // Fallback to fetch (keep it fire-and-forget)
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: json,
+        keepalive: true
+      }).then(r => ({ ok: r.ok }));
+    } catch (e) {
+      return Promise.reject(e);
     }
+  }
+
+  // Handler for the "analytics link" button
+  document.getElementById('analyticsLinkBtn').addEventListener('click', function (ev) {
+    const payload = {
+      event: 'analytics_link_click',
+      timestamp: new Date().toISOString(),
+      page: location.pathname + location.search,
+      elementId: ev.currentTarget.id || null
+    };
+
+    // Example server call — replace with your actual analytics endpoint
+    sendBeaconJson('/collect/analytics-link', payload).catch(err => {
+      // graceful fallback / logging
+      console.warn('analytics link call failed', err);
+    });
+
+    // Fire a CustomEvent that Launch can also listen for (optional)
+    // Name it clearly so it's easy to use in a Launch Custom Event rule.
+    const customEvent = new CustomEvent('analyticsLinkClicked', { detail: payload });
+    document.dispatchEvent(customEvent);
+
+    // (Optional) If you have Adobe's _satellite or s.t() available and want to call it directly,
+    // you could also call it here. Example (uncomment if available):
+    // if (window.s && typeof window.s.tl === 'function') {
+    //   window.s.tl(true, 'o', 'Analytics Link Click');
+    // }
+  });
+
+  // Handler for the "page view" button — demonstrate a virtual page view
+  document.getElementById('pageviewBtn').addEventListener('click', function (ev) {
+    const newVirtualPath = '/virtual' + '/pageview-' + Date.now();
+    const payload = {
+      event: 'virtual_page_view',
+      virtualPath: newVirtualPath,
+      timestamp: new Date().toISOString(),
+      elementId: ev.currentTarget.id || null
+    };
+
+    // Update browser history (so URL reflects the virtual page view). This is optional.
+    history.pushState({ virtual: true }, '', newVirtualPath);
+
+    // Use sendBeacon / fetch to notify your server about the virtual page view
+    sendBeaconJson('/collect/pageview', payload).catch(err => {
+      console.warn('pageview call failed', err);
+    });
+
+    // Dispatch a CustomEvent for Launch to optionally listen for
+    const customEvent = new CustomEvent('virtualPageView', { detail: payload });
+    document.dispatchEvent(customEvent);
+
+    // (Optional) If using Adobe Analytics and you want to call a virtual page view directly:
+    // if (window.s && typeof window.s.t === 'function') {
+    //   // set s.pageName or other props, then call s.t();
+    // }
+  });
+
+  // Example: Listening to popstate so virtual pageviews behave more like real pages
+  window.addEventListener('popstate', function () {
+    // You could send another pageview here if desired when the user navigates back/forward
+    // (left intentionally blank)
+  });
   </script>
 </body>
 </html>
