@@ -3,124 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Two Buttons — Analytics Link & Pageview Example</title>
+  <title>Two Buttons — Launch Element Selector Example</title>
+
+  <!-- Adobe Launch Library -->
+  <script src="https://assets.adobedtm.com/e9875dd51dbe/421ebfdfa63f/launch-4e0bef301cff-development.min.js" async></script>
+
   <style>
     body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; padding: 40px; }
-    button { padding: 12px 18px; margin: 8px; font-size: 16px; border-radius: 6px; }
+    button { padding: 12px 18px; margin: 8px; font-size: 16px; border-radius: 6px; cursor: pointer; }
     .btn-analytics-link { background: #0b69ff; color: white; }
     .btn-pageview { background: #00a86b; color: white; }
   </style>
-  <script src="https://assets.adobedtm.com/e9875dd51dbe/421ebfdfa63f/launch-4e0bef301cff-development.min.js" async></script>
 </head>
 <body>
-  <h1>Demo: Analytics Link call & Pageview call</h1>
+  <h1>Launch Element Selector Demo</h1>
 
-  <!-- IMPORTANT: These are the exact CSS selectors you should use in your Launch rules -->
-  <button class="btn-analytics-link" data-event="analytics-link" id="analyticsLinkBtn">
-    Fire analytics link call
+  <!-- Use this selector in Launch Rule 1 -->
+  <button class="btn-analytics-link" id="analyticsLinkBtn">
+    Analytics Link Button
   </button>
 
-  <button class="btn-pageview" data-event="pageview" id="pageviewBtn">
-    Fire page view call
+  <!-- Use this selector in Launch Rule 2 -->
+  <button class="btn-pageview" id="pageviewBtn">
+    Page View Button
   </button>
 
-  <script>
-  /*
-    Behaviour implemented here is intentionally simple and framework-agnostic.
-
-    - Launch rules: create two rules using Event Type = "Element" -> "Click"
-      and use the following CSS selectors for the rules' "Element selector / matches":
-        1) .btn-analytics-link
-        2) .btn-pageview
-
-    - The sample below does two things on each click:
-        * sends a small server call (fetch / navigator.sendBeacon) to emulate network/server call
-        * dispatches a CustomEvent on document so you can also create Launch rules that
-          listen for a Custom Event (optional). This is handy if you want Launch to react
-          to programmatic events rather than direct clicks.
-  */
-
-  // Utility to safely send a small payload using sendBeacon when available
-  function sendBeaconJson(url, data) {
-    try {
-      const json = JSON.stringify(data || {});
-      if (navigator.sendBeacon) {
-        const blob = new Blob([json], { type: 'application/json' });
-        navigator.sendBeacon(url, blob);
-        return Promise.resolve({ beacon: true });
-      }
-      // Fallback to fetch (keep it fire-and-forget)
-      return fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: json,
-        keepalive: true
-      }).then(r => ({ ok: r.ok }));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  // Handler for the "analytics link" button
-  document.getElementById('analyticsLinkBtn').addEventListener('click', function (ev) {
-    const payload = {
-      event: 'analytics_link_click',
-      timestamp: new Date().toISOString(),
-      page: location.pathname + location.search,
-      elementId: ev.currentTarget.id || null
-    };
-
-    // Example server call — replace with your actual analytics endpoint
-    sendBeaconJson('/collect/analytics-link', payload).catch(err => {
-      // graceful fallback / logging
-      console.warn('analytics link call failed', err);
-    });
-
-    // Fire a CustomEvent that Launch can also listen for (optional)
-    // Name it clearly so it's easy to use in a Launch Custom Event rule.
-    const customEvent = new CustomEvent('analyticsLinkClicked', { detail: payload });
-    document.dispatchEvent(customEvent);
-
-    // (Optional) If you have Adobe's _satellite or s.t() available and want to call it directly,
-    // you could also call it here. Example (uncomment if available):
-    // if (window.s && typeof window.s.tl === 'function') {
-    //   window.s.tl(true, 'o', 'Analytics Link Click');
-    // }
-  });
-
-  // Handler for the "page view" button — demonstrate a virtual page view
-  document.getElementById('pageviewBtn').addEventListener('click', function (ev) {
-    const newVirtualPath = '/virtual' + '/pageview-' + Date.now();
-    const payload = {
-      event: 'virtual_page_view',
-      virtualPath: newVirtualPath,
-      timestamp: new Date().toISOString(),
-      elementId: ev.currentTarget.id || null
-    };
-
-    // Update browser history (so URL reflects the virtual page view). This is optional.
-    history.pushState({ virtual: true }, '', newVirtualPath);
-
-    // Use sendBeacon / fetch to notify your server about the virtual page view
-    sendBeaconJson('/collect/pageview', payload).catch(err => {
-      console.warn('pageview call failed', err);
-    });
-
-    // Dispatch a CustomEvent for Launch to optionally listen for
-    const customEvent = new CustomEvent('virtualPageView', { detail: payload });
-    document.dispatchEvent(customEvent);
-
-    // (Optional) If using Adobe Analytics and you want to call a virtual page view directly:
-    // if (window.s && typeof window.s.t === 'function') {
-    //   // set s.pageName or other props, then call s.t();
-    // }
-  });
-
-  // Example: Listening to popstate so virtual pageviews behave more like real pages
-  window.addEventListener('popstate', function () {
-    // You could send another pageview here if desired when the user navigates back/forward
-    // (left intentionally blank)
-  });
-  </script>
 </body>
 </html>
